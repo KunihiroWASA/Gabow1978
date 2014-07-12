@@ -21,6 +21,7 @@ std::ostream& operator<<(std::ostream& os, const Edge e)
 class Subtree {
     std::vector<Node> nodes; 
     std::vector<Edge> edges; 
+    std::map<Node, int> H, P; 
 
     public: 
 
@@ -32,7 +33,41 @@ class Subtree {
         edges.clear(); 
         std::copy(other.nodes.begin(), other.nodes.end(), std::back_inserter(nodes));  
         std::copy(other.edges.begin(), other.edges.end(), std::back_inserter(edges));  
+
+        computePH(); 
         return (*this); 
+    }
+
+    void computePH()
+    {
+        for (auto& n : nodes) {
+            P[n] = 0; H[n] = 0; 
+        }
+        int current_p = 1;
+        P[nodes[0]] = current_p++; 
+
+        std::vector<Edge> __edges; 
+        std::copy(edges.begin(), edges.end(), std::back_inserter(__edges));  
+        while (!__edges.empty()) {
+            auto itr  = __edges.begin();
+            Node prev = -1;
+            std::vector<Node> changed_p; 
+            for (; itr != __edges.end(); ) {
+                Edge e = *itr; 
+                if (P[e.first] > 0 and (prev == -1 or prev == e.first)) {
+                    changed_p.push_back(e.first); 
+                    P[e.second] = current_p++;
+                    H[e.second] = P[e.second]; 
+                    itr         = __edges.erase(itr);
+                    prev        = e.second;
+                } else {
+                    ++itr; 
+                }
+            }
+            for (auto& n : changed_p) {
+                H[n] = current_p - 1; 
+            }
+        }
     }
 
     std::size_t size() {
@@ -47,8 +82,10 @@ class Subtree {
         }
         return false; 
     }
+
     bool add(Node v) {
         if (!has(v)) {
+            P[v] = 0; H[v] = 0; 
             nodes.push_back(v); 
             return true; 
         }
@@ -77,7 +114,7 @@ class Subtree {
         }
         std::cout << "[ ";
         for (auto& n : nodes) {
-            std::cout << n << " " ;  
+            std::cout << n << "(" << P[n] << ", " << H[n] << ") " ;  
         }
         std::cout  << "]" << std::endl; 
     }
@@ -101,20 +138,8 @@ class Subtree {
     // Is w a decendent of v ? 
     bool is_decendent_of(Node w, Node v)
     {
-        bool f = true; 
-        while (f) {
-            f = false; 
-            for (auto& e : edges) {
-                if (e.second == w) {
-                    if (e.first == v) {
-                        return true; 
-                    } else {
-                        f = true; 
-                        w = e.first;
-                        break; 
-                    }
-                }
-            }
+        if (P[v] <= P[w] and P[w] <= H[v]) {
+            return true; 
         }
         return false; 
     }
